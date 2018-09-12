@@ -1,5 +1,6 @@
 #include "pila.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 /* Definición del struct pila proporcionado por la cátedra.
  */
@@ -15,8 +16,21 @@ struct pila {
  *                    PRIMITIVAS DE LA PILA
  * *****************************************************************/
 
+/* FUNCION AUXILIAR */
+bool redimensionar(pila_t* pila, size_t tam_nuevo) {
+    void* pila_tam_nuevo = realloc(pila->datos, tam_nuevo * sizeof(void*));
+    if (pila_tam_nuevo == NULL) {
+        return false;
+    }
+    pila->datos = pila_tam_nuevo;
+    pila->capacidad = tam_nuevo;
+    return true;
+}
+
 // compilar: gcc -std=c99 -Wall -Wconversion -Wtype-limits -pedantic -Werror -g -o pruebas *.c
 // valgrind: valgrind --leak-check=full --track-origins=yes --show-reachable=yes ./pruebas
+
+const size_t tam_inicial = 10;
 
 pila_t* pila_crear (void){
     pila_t* pila = malloc(sizeof(pila_t));
@@ -25,7 +39,7 @@ pila_t* pila_crear (void){
         return NULL;
     }
 
-    pila->capacidad = 10;
+    pila->capacidad = tam_inicial;
     pila->cantidad = 0;
 
     pila->datos = malloc(sizeof(void*) *pila->capacidad); //verificar con un if.
@@ -38,58 +52,47 @@ pila_t* pila_crear (void){
 }
 
 void pila_destruir (pila_t *pila){
-    for (size_t i=0;i <= pila->capacidad; i++){
-        free (pila->datos);
+    if (pila != NULL){
+        for (size_t i=0;i <= pila->capacidad; i++){
+            free (pila->datos);
+        }
     }
     free (pila);
 }
 
 bool pila_esta_vacia (const pila_t *pila){
-    if (pila->datos[0] == NULL) return true;
-    return false;
+    if (pila == NULL) return true;
+    if (pila->cantidad > 0) return false;
+    return true;
 }
 
 bool pila_apilar (pila_t *pila, void *valor){
     size_t nuevo_tope = pila->cantidad + 1;
     if (nuevo_tope > pila->capacidad) { //Si el tamaño de la pila es menor al nuevo tope, aumento la capacidad
-        void* r = realloc((void*) pila,sizeof(pila->datos) *((pila->capacidad) * 2));
-        if(r) {
-            pila->datos = r; 
-            pila->capacidad *= 2;
-        } else {
-            return false;
-        }//cint c repl
-        pila->datos[nuevo_tope] = &valor;
-        pila->capacidad = nuevo_tope;
-        return true;
-    }
-    else {
-        pila->datos[pila->cantidad -1] = &valor;
-        pila->cantidad = nuevo_tope;
-        return true;
-    }
+        pila->capacidad *= 2;
+        redimensionar(pila, pila->capacidad);
+        }
+    pila->datos[pila->cantidad -1] = &valor;
+    pila->cantidad = nuevo_tope;
+    return true;
 }
 
 void* pila_ver_tope (const pila_t *pila){
-size_t pos = (pila->capacidad - (pila->capacidad - pila->cantidad)-1) ;
-if (pila_esta_vacia(pila)) return NULL;
-return pila->datos[pos];
+    if (pila_esta_vacia(pila)) return NULL;
+    return pila->datos[pila->cantidad];
 }
 
 void* pila_desapilar (pila_t *pila){
-    void **aux= NULL;
-    if (pila_esta_vacia(&*pila)) return aux;
+    void *aux;
+    if (pila_esta_vacia(pila)) return NULL;
     else {
         aux= pila->datos[pila->cantidad];
         free (pila->datos[pila->cantidad]);
         pila->cantidad -= 1;
     } 
-    if (pila->cantidad < (pila->capacidad/2)){
-        void* r= realloc ((void *) pila, sizeof (pila->datos)*((pila->capacidad) /2));
-        if(r) {
-            pila->datos = r; 
+    if (pila->cantidad <= (pila->capacidad/4) && (pila->capacidad/4) > tam_inicial){
             pila->capacidad /= 2;
+            redimensionar(pila, pila->capacidad);
         }
-    }
     return aux;
 }
